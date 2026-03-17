@@ -7,17 +7,18 @@ export async function createOrUpdateCustomer(
 ) {
   const supabase = createServiceRoleClient();
 
-  const { data: existingCustomer, error: fetchError } = await supabase
+  // First try to find by creem_customer_id
+  const { data: byCreemId, error: creemError } = await supabase
     .from("customers")
     .select()
     .eq("creem_customer_id", creemCustomer.id)
     .single();
 
-  if (fetchError && fetchError.code !== "PGRST116") {
-    throw fetchError;
+  if (creemError && creemError.code !== "PGRST116") {
+    throw creemError;
   }
 
-  if (existingCustomer) {
+  if (byCreemId) {
     const { error } = await supabase
       .from("customers")
       .update({
@@ -26,12 +27,43 @@ export async function createOrUpdateCustomer(
         country: creemCustomer.country,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", existingCustomer.id);
+      .eq("id", byCreemId.id);
 
     if (error) throw error;
-    return existingCustomer.id;
+    return byCreemId.id;
   }
 
+  // If not found by creem_customer_id, try to find by user_id
+  // This handles the case where customer was auto-created at signup
+  const { data: byUserId, error: userError } = await supabase
+    .from("customers")
+    .select()
+    .eq("user_id", userId)
+    .single();
+
+  if (userError && userError.code !== "PGRST116") {
+    throw userError;
+  }
+
+  if (byUserId) {
+    // Link existing customer to creem_customer_id
+    const { error } = await supabase
+      .from("customers")
+      .update({
+        creem_customer_id: creemCustomer.id,
+        email: creemCustomer.email,
+        name: creemCustomer.name,
+        country: creemCustomer.country,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", byUserId.id);
+
+    if (error) throw error;
+    console.log(`Linked existing customer ${byUserId.id} to creem_customer_id ${creemCustomer.id}`);
+    return byUserId.id;
+  }
+
+  // No existing customer found, create new one
   const { data: newCustomer, error } = await supabase
     .from("customers")
     .insert({

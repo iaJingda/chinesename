@@ -69,11 +69,15 @@ export async function POST(request: Request) {
 
 async function handleCheckoutCompleted(event: CreemWebhookEvent) {
   const checkout = event.object;
-  console.log("Processing completed checkout:", checkout);
+  console.log("Processing completed checkout:", JSON.stringify(checkout, null, 2));
 
   try {
+    // Metadata may be on checkout.metadata or checkout.order.metadata
+    const metadata = checkout.metadata || checkout.order?.metadata || {};
+    console.log("Resolved metadata:", metadata);
+
     // Validate required data
-    if (!checkout.metadata?.user_id) {
+    if (!metadata.user_id) {
       console.error("Missing user_id in checkout metadata:", checkout);
       throw new Error("user_id is required in checkout metadata");
     }
@@ -81,17 +85,21 @@ async function handleCheckoutCompleted(event: CreemWebhookEvent) {
     // Create or update customer
     const customerId = await createOrUpdateCustomer(
       checkout.customer,
-      checkout.metadata.user_id
+      metadata.user_id
     );
+    console.log("Customer ID resolved:", customerId);
 
     // Check if this is a credit purchase
-    if (checkout.metadata?.product_type === "credits") {
+    if (metadata.product_type === "credits") {
+      const credits = Number(metadata.credits) || 0;
+      console.log(`Adding ${credits} credits to customer ${customerId}`);
       await addCreditsToCustomer(
         customerId,
-        checkout.metadata?.credits,
-        checkout.order.id,
-        `Purchased ${checkout.metadata?.credits} credits`
+        credits,
+        checkout.order?.id,
+        `Purchased ${credits} credits`
       );
+      console.log("Credits added successfully");
     }
     // If subscription exists, create or update it
     else if (checkout.subscription) {
