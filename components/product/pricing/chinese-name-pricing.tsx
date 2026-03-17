@@ -4,68 +4,22 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Sparkles, Crown, Gift } from "lucide-react";
+import { Check, Sparkles, Crown, Gift, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-
-interface PricingTier {
-  id: string;
-  name: string;
-  price: string;
-  credits: number;
-  description: string;
-  features: string[];
-  icon: React.ReactNode;
-  popular?: boolean;
-  buttonText: string;
-  buttonVariant: "default" | "outline";
-}
-
-const pricingTiers: PricingTier[] = [
-  {
-    id: "free-trial",
-    name: "Free Trial",
-    price: "$0",
-    credits: 1,
-    description: "Perfect for trying out our service",
-    features: [
-      "1 free name generation",
-      "Basic name analysis",
-      "Cultural significance",
-      "Pinyin pronunciation",
-      "No registration required"
-    ],
-    icon: <Gift className="h-6 w-6" />,
-    buttonText: "Try Free",
-    buttonVariant: "outline"
-  },
-  {
-    id: "credit-pack",
-    name: "Credit Pack",
-    price: "$5",
-    credits: 1000,
-    description: "Best value for regular users",
-    features: [
-      "1000 credits included",
-      "Standard & Premium generation",
-      "Personality-based matching",
-      "Custom name preferences",
-      "Unlimited name variations",
-      "Save favorite names",
-      "Export to PDF"
-    ],
-    icon: <Crown className="h-6 w-6" />,
-    popular: true,
-    buttonText: "Purchase Credits",
-    buttonVariant: "default"
-  }
-];
+import { CREDITS_TIERS } from "@/config/subscriptions";
 
 interface ChineseNamePricingProps {
   onScrollToForm?: () => void;
 }
+
+const tierIcons = [
+  <Zap key="basic" className="h-6 w-6" />,
+  <Crown key="standard" className="h-6 w-6" />,
+  <Sparkles key="premium" className="h-6 w-6" />,
+];
 
 export default function ChineseNamePricing({ onScrollToForm }: ChineseNamePricingProps) {
   const router = useRouter();
@@ -73,20 +27,18 @@ export default function ChineseNamePricing({ onScrollToForm }: ChineseNamePricin
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
-  const handlePurchase = async (tierId: string) => {
-    if (tierId === "free-trial") {
-      // Call the scroll to form function if provided, otherwise scroll to form section
-      if (onScrollToForm) {
-        onScrollToForm();
-      } else {
-        const formSection = document.querySelector('[data-name-generator-form]');
-        if (formSection) {
-          formSection.scrollIntoView({ behavior: 'smooth' });
-        }
+  const handleFreeTrialClick = () => {
+    if (onScrollToForm) {
+      onScrollToForm();
+    } else {
+      const formSection = document.querySelector('[data-name-generator-form]');
+      if (formSection) {
+        formSection.scrollIntoView({ behavior: 'smooth' });
       }
-      return;
     }
+  };
 
+  const handlePurchase = async (tierId: string, creditAmount: number) => {
     if (!user) {
       toast({
         title: "Sign In Required",
@@ -98,10 +50,8 @@ export default function ChineseNamePricing({ onScrollToForm }: ChineseNamePricin
     }
 
     setIsProcessing(tierId);
-    
+
     try {
-      // Integration with the starter kit's payment system
-      // This would use the existing Creem.io integration
       const response = await fetch('/api/creem/create-checkout', {
         method: 'POST',
         headers: {
@@ -109,7 +59,7 @@ export default function ChineseNamePricing({ onScrollToForm }: ChineseNamePricin
         },
         body: JSON.stringify({
           productType: 'chinese-name-credits',
-          quantity: 1000, // 1000 credits
+          quantity: creditAmount,
           userId: user.id,
         }),
       });
@@ -119,13 +69,13 @@ export default function ChineseNamePricing({ onScrollToForm }: ChineseNamePricin
       }
 
       const { checkoutUrl } = await response.json();
-      
+
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
       } else {
         throw new Error('No checkout URL received');
       }
-      
+
     } catch (error) {
       console.error('Payment error:', error);
       toast({
@@ -153,21 +103,85 @@ export default function ChineseNamePricing({ onScrollToForm }: ChineseNamePricin
               Choose Your Plan
             </h2>
             <p className="mx-auto max-w-2xl text-muted-foreground text-lg">
-              Start with a free trial or get the best value with our credit pack for unlimited Chinese name generation
+              Start with a free trial or pick a credit package for Chinese name generation
             </p>
           </motion.div>
 
           {/* Pricing Cards */}
-          <div className="grid gap-8 lg:grid-cols-2 max-w-4xl mx-auto">
-            {pricingTiers.map((tier, index) => (
+          <div className="grid gap-8 lg:grid-cols-4 max-w-6xl mx-auto">
+            {/* Free Trial Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="relative"
+            >
+              <Card className="h-full transition-all duration-300 hover:shadow-lg border border-border hover:border-primary/20">
+                <CardHeader className="text-center pb-4">
+                  <div className="flex items-center justify-center mb-4">
+                    <div className="p-3 rounded-full bg-muted">
+                      <div className="text-muted-foreground">
+                        <Gift className="h-6 w-6" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <CardTitle className="text-2xl font-bold text-foreground">
+                    Free Trial
+                  </CardTitle>
+
+                  <div className="space-y-2">
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className="text-5xl font-bold text-foreground">$0</span>
+                    </div>
+                    <p className="text-muted-foreground">
+                      Perfect for trying out our service
+                    </p>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    {[
+                      "1 free name generation",
+                      "Basic name analysis",
+                      "Cultural significance",
+                      "Pinyin pronunciation",
+                    ].map((feature, i) => (
+                      <div key={i} className="flex items-start gap-3">
+                        <div className="mt-0.5 p-1 rounded-full bg-muted">
+                          <Check className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                        <span className="text-muted-foreground text-sm leading-relaxed">
+                          {feature}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-4">
+                    <Button
+                      onClick={handleFreeTrialClick}
+                      variant="outline"
+                      className="w-full h-12 text-lg font-medium transition-all duration-200 border-primary/20 text-primary hover:bg-primary/5"
+                    >
+                      Try Free
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Credit Tier Cards from config */}
+            {CREDITS_TIERS.map((tier, index) => (
               <motion.div
                 key={tier.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
+                transition={{ duration: 0.5, delay: (index + 1) * 0.1 }}
                 className="relative"
               >
-                {tier.popular && (
+                {tier.featured && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <Badge className="bg-primary text-primary-foreground px-4 py-1">
                       <Sparkles className="h-3 w-3 mr-1" />
@@ -175,39 +189,37 @@ export default function ChineseNamePricing({ onScrollToForm }: ChineseNamePricin
                     </Badge>
                   </div>
                 )}
-                
+
                 <Card className={`h-full transition-all duration-300 hover:shadow-lg ${
-                  tier.popular 
-                    ? 'border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10' 
+                  tier.featured
+                    ? 'border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10'
                     : 'border border-border hover:border-primary/20'
                 }`}>
                   <CardHeader className="text-center pb-4">
                     <div className="flex items-center justify-center mb-4">
                       <div className={`p-3 rounded-full ${
-                        tier.popular ? 'bg-primary/10' : 'bg-muted'
+                        tier.featured ? 'bg-primary/10' : 'bg-muted'
                       }`}>
-                        <div className={tier.popular ? 'text-primary' : 'text-muted-foreground'}>
-                          {tier.icon}
+                        <div className={tier.featured ? 'text-primary' : 'text-muted-foreground'}>
+                          {tierIcons[index] || tierIcons[0]}
                         </div>
                       </div>
                     </div>
-                    
+
                     <CardTitle className="text-2xl font-bold text-foreground">
                       {tier.name}
                     </CardTitle>
-                    
+
                     <div className="space-y-2">
                       <div className="flex items-baseline justify-center gap-1">
                         <span className="text-5xl font-bold text-foreground">
-                          {tier.price}
+                          {tier.priceMonthly}
                         </span>
-                        {tier.id !== "free-trial" && (
-                          <span className="text-muted-foreground text-lg">
-                            / {tier.credits} credits
-                          </span>
-                        )}
+                        <span className="text-muted-foreground text-lg">
+                          / {tier.creditAmount} credits
+                        </span>
                       </div>
-                      
+
                       <p className="text-muted-foreground">
                         {tier.description}
                       </p>
@@ -215,15 +227,14 @@ export default function ChineseNamePricing({ onScrollToForm }: ChineseNamePricin
                   </CardHeader>
 
                   <CardContent className="space-y-6">
-                    {/* Features List */}
                     <div className="space-y-3">
-                      {tier.features.map((feature, featureIndex) => (
+                      {(tier.features || []).map((feature, featureIndex) => (
                         <div key={featureIndex} className="flex items-start gap-3">
                           <div className={`mt-0.5 p-1 rounded-full ${
-                            tier.popular ? 'bg-primary/10' : 'bg-muted'
+                            tier.featured ? 'bg-primary/10' : 'bg-muted'
                           }`}>
                             <Check className={`h-3 w-3 ${
-                              tier.popular ? 'text-primary' : 'text-muted-foreground'
+                              tier.featured ? 'text-primary' : 'text-muted-foreground'
                             }`} />
                           </div>
                           <span className="text-muted-foreground text-sm leading-relaxed">
@@ -233,14 +244,13 @@ export default function ChineseNamePricing({ onScrollToForm }: ChineseNamePricin
                       ))}
                     </div>
 
-                    {/* Purchase Button */}
                     <div className="pt-4">
                       <Button
-                        onClick={() => handlePurchase(tier.id)}
+                        onClick={() => handlePurchase(tier.id, tier.creditAmount || 0)}
                         disabled={isProcessing === tier.id}
-                        variant={tier.buttonVariant}
+                        variant={tier.featured ? "default" : "outline"}
                         className={`w-full h-12 text-lg font-medium transition-all duration-200 ${
-                          tier.popular
+                          tier.featured
                             ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
                             : 'border-primary/20 text-primary hover:bg-primary/5'
                         }`}
@@ -251,26 +261,17 @@ export default function ChineseNamePricing({ onScrollToForm }: ChineseNamePricin
                             Processing...
                           </div>
                         ) : (
-                          tier.buttonText
+                          "Purchase"
                         )}
                       </Button>
                     </div>
-
-                    {/* Value Proposition */}
-                    {tier.id === "credit-pack" && (
-                      <div className="text-center pt-2">
-                        <p className="text-sm text-muted-foreground">
-                          Only $0.005 per credit • Amazing value!
-                        </p>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               </motion.div>
             ))}
           </div>
 
-          {/* FAQ or Additional Info */}
+          {/* FAQ */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
