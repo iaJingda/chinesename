@@ -31,16 +31,18 @@ export default async function DashboardPage() {
       credits_history (
         amount,
         type,
-        created_at
+        created_at,
+        description
       )
     `
     )
     .eq("user_id", user.id)
+    .order("created_at", { referencedTable: "credits_history", ascending: false })
     .single();
 
   const subscription = customerData?.subscriptions?.[0];
   const credits = customerData?.credits || 0;
-  const recentCreditsHistory = customerData?.credits_history?.slice(0, 2) || [];
+  const recentCreditsHistory = customerData?.credits_history?.slice(0, 5) || [];
 
   return (
     <div className="flex-1 w-full flex flex-col gap-6 sm:gap-8 px-4 sm:px-8 container">
