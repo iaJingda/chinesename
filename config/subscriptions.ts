@@ -58,8 +58,8 @@ export const CREDITS_TIERS: ProductTier[] = [
   {
     name: "Basic Package",
     id: "tier-3-credits",
-    productId: "prod_51tPEMwkSY7gLxjHLnTSnC", // $9 one-time purchase
-    priceMonthly: "$9",
+    productId: "prod_34nEmQTRpYfOey4l2q1FYX", // $1 one-time purchase (测试价格)
+    priceMonthly: "$1",
     description: "3 credits for testing and small-scale projects.",
     creditAmount: 3,
     features: [
