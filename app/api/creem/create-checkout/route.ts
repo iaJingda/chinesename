@@ -71,7 +71,8 @@ export async function POST(request: NextRequest) {
 
     console.log("Creem API request:", {
       url: `${creemApiUrl}/checkouts`,
-      body: requestBody,
+      apiKey: creemApiKey ? `${creemApiKey.slice(0, 8)}...` : "MISSING",
+      body: JSON.stringify(requestBody, null, 2),
     });
 
     const response = await fetch(`${creemApiUrl}/checkouts`, {
@@ -86,6 +87,8 @@ export async function POST(request: NextRequest) {
     const responseText = await response.text();
     console.log("Creem API response:", {
       status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
       body: responseText,
     });
 
